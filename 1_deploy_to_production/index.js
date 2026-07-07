@@ -13,6 +13,42 @@ const app = express();
 // If PORT is not defined, use 3000 as the default.
 const PORT = process.env.PORT || 3000;
 
+const githubData = {
+  "login": "Akshat1853",
+  "id": 151821124,
+  "node_id": "U_kgDOCQybRA",
+  "avatar_url": "https://avatars.githubusercontent.com/u/151821124?v=4",
+  "gravatar_id": "",
+  "url": "https://api.github.com/users/Akshat1853",
+  "html_url": "https://github.com/Akshat1853",
+  "followers_url": "https://api.github.com/users/Akshat1853/followers",
+  "following_url": "https://api.github.com/users/Akshat1853/following{/other_user}",
+  "gists_url": "https://api.github.com/users/Akshat1853/gists{/gist_id}",
+  "starred_url": "https://api.github.com/users/Akshat1853/starred{/owner}{/repo}",
+  "subscriptions_url": "https://api.github.com/users/Akshat1853/subscriptions",
+  "organizations_url": "https://api.github.com/users/Akshat1853/orgs",
+  "repos_url": "https://api.github.com/users/Akshat1853/repos",
+  "events_url": "https://api.github.com/users/Akshat1853/events{/privacy}",
+  "received_events_url": "https://api.github.com/users/Akshat1853/received_events",
+  "type": "User",
+  "user_view_type": "public",
+  "site_admin": false,
+  "name": null,
+  "company": null,
+  "blog": "",
+  "location": null,
+  "email": null,
+  "hireable": null,
+  "bio": null,
+  "twitter_username": null,
+  "public_repos": 24,
+  "public_gists": 0,
+  "followers": 0,
+  "following": 0,
+  "created_at": "2023-11-23T07:43:06Z",
+  "updated_at": "2026-05-25T02:04:56Z"
+}
+
 // ======================================================
 // Route Definitions
 // ======================================================
@@ -50,6 +86,15 @@ app.get("/login", (req, res) => {
   // The browser will render this as a heading.
   res.send("<h1>Please login at my website</h1>");
 });
+
+// Handle GET requests for the Github Route (/github)
+//
+// When a user visits:
+// http://localhost:3000/github
+// this function runs.
+app.get("/github", (req, res) => {
+    res.json(githubData);
+})
 
 // ======================================================
 // Start the Server
