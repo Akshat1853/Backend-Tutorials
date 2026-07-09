@@ -1,0 +1,19 @@
+{
+  "name": "youtube_backend",
+  "version": "1.0.0",
+  "description": "youtube backend project",
+  "keywords": [
+    "javascript",
+    "backend"
+  ],
+  "license": "ISC",
+  "author": "Akshat dua",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
