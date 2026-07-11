@@ -69,14 +69,12 @@ const userSchema = new Schema(
 
 // PRE SAVE HOOK
 // Runs automatically before saving a user document
-userSchema.pre("save", async function (next) {
+userSchema.pre("save", async function () {
   // If password wasn't modified, skip hashing
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) return;
 
   // Hash password before storing
   this.password = await bcrypt.hash(this.password, 10);
-
-  next();
 });
 
 // Compare entered password with stored hashed password
