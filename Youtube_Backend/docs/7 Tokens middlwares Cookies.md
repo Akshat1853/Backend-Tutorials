@@ -1,80 +1,89 @@
-# Access Tokens, Refresh Tokens, Middleware & Cookies
+# Learnings.md
 
-## Overview
+# Access Tokens, Refresh Tokens, Cookies & Authentication Middleware
 
-In this lesson, we implemented a complete authentication system using JWT (JSON Web Tokens), Access Tokens, Refresh Tokens, Cookies, and Authentication Middleware.
+---
 
-This authentication architecture is widely used in modern web applications because it provides:
+# Table of Contents
 
-* Secure authentication
-* Better user experience
-* Stateless request handling
-* Token-based authorization
-* Automatic session renewal
-* Protection of private routes
+1. Authentication vs Authorization
+2. Why Token-Based Authentication?
+3. JWT (JSON Web Token)
+4. Access Token
+5. Refresh Token
+6. Access Token vs Refresh Token
+7. Why Store Refresh Tokens in Database?
+8. Token Generation Helper Function
+9. Login Flow
+10. Cookies and Security
+11. Authentication Middleware
+12. Protected Routes
+13. Logout Flow
+14. Refresh Access Token Endpoint
+15. Refresh Token Rotation
+16. Complete Authentication Lifecycle
+17. Security Best Practices
+18. Common Mistakes Fixed During Development
+19. Interview Questions
+20. Key Takeaways
 
 ---
 
 # Authentication vs Authorization
 
-These two terms are often confused.
+These two concepts are often confused.
 
 ## Authentication
 
-Authentication means verifying **who the user is**.
+Authentication answers:
+
+> Who are you?
 
 Example:
 
 ```text
-User enters:
 Email: akshat@gmail.com
 Password: ********
 ```
 
-Server checks whether the credentials are correct.
-
-If correct:
-
-```text
-User authenticated successfully
-```
+The server verifies the credentials and confirms the identity of the user.
 
 ---
 
 ## Authorization
 
-Authorization means determining **what the authenticated user is allowed to do**.
+Authorization answers:
+
+> What are you allowed to do?
 
 Example:
 
 ```text
-User A can upload videos
-User B can delete videos
-User C can only view videos
+User A → Upload videos
+User B → Delete videos
+User C → View videos only
 ```
 
-The user is already authenticated, but authorization decides which resources they can access.
+The user is already authenticated, but authorization determines what resources they can access.
 
 ---
 
-# Why Do We Need Tokens?
+# Why Token-Based Authentication?
 
-Imagine a user logs into a website.
-
-Without tokens:
+Imagine a website without tokens.
 
 ```text
-Open website
-Enter email
-Enter password
+Open Website
+↓
+Enter Password
 
-Open profile
-Enter email
-Enter password
+Open Profile
+↓
+Enter Password
 
-Upload video
-Enter email
-Enter password
+Upload Video
+↓
+Enter Password
 ```
 
 This would create a terrible user experience.
@@ -82,20 +91,22 @@ This would create a terrible user experience.
 Instead:
 
 ```text
-Login once
-Receive token
-Use token for future requests
+Login Once
+↓
+Receive Tokens
+↓
+Use Tokens For Future Requests
 ```
 
-The token acts as proof that the user has already logged in.
+The server no longer needs the user's password for every request.
 
 ---
 
 # JWT (JSON Web Token)
 
-JWT is a compact, secure way of transmitting information between client and server.
+JWT is a secure way of transmitting information between client and server.
 
-A JWT generally contains:
+A JWT consists of:
 
 ```text
 Header
@@ -107,32 +118,26 @@ Example Payload:
 
 ```json
 {
-    "_id": "123456",
-    "username": "akshat"
+  "_id": "123456",
+  "username": "akshat"
 }
 ```
 
-The token is digitally signed using a secret key.
+The payload is signed using a secret key.
 
 Example:
 
-```js
+```env
 ACCESS_TOKEN_SECRET
 ```
 
-When a request arrives, the server verifies the signature.
+Whenever a token arrives:
 
-If the signature is valid:
-
-```text
-Token is trusted
+```js
+jwt.verify(token, secret)
 ```
 
-Otherwise:
-
-```text
-Token is rejected
-```
+is used to verify its authenticity.
 
 ---
 
@@ -143,57 +148,55 @@ An Access Token is a short-lived JWT.
 Examples:
 
 ```text
-15 minutes
-30 minutes
-1 hour
+15 Minutes
+30 Minutes
+1 Hour
 ```
 
-Its purpose is to authorize access to protected resources.
+Purpose:
 
-Example:
+```text
+Access Protected Resources
+```
+
+Examples:
 
 ```text
 GET /profile
-POST /tweet
+POST /video
 DELETE /comment
-PATCH /video
+PATCH /tweet
 ```
 
-Whenever a user accesses a protected endpoint, the server verifies the access token.
-
-### Access Token Flow
+Whenever a protected route is accessed:
 
 ```text
-User Logs In
-      ↓
-Access Token Generated
-      ↓
-User Requests Protected Resource
-      ↓
-Server Verifies Token
-      ↓
-Access Granted
+Verify Access Token
+↓
+Valid → Continue
+↓
+Invalid → Reject
 ```
 
 ---
 
 ## Why Keep Access Tokens Short-Lived?
 
-If an attacker steals an access token:
+Suppose an attacker somehow steals an access token.
+
+If the token expires quickly:
 
 ```text
-Token will expire soon
+Token Becomes Useless Soon
 ```
 
-This reduces the security risk.
-
-Because of this, access tokens are intentionally given a short expiration time.
+This reduces security risks significantly.
 
 ---
 
 # Refresh Token
 
-A Refresh Token is a long-lived token.
+A Refresh Token is a long-lived JWT.
 
 Examples:
 
@@ -203,9 +206,13 @@ Examples:
 90 Days
 ```
 
-Its purpose is not to access resources.
+Purpose:
 
-Instead, it is used to generate a new access token.
+```text
+Generate New Access Tokens
+```
+
+A Refresh Token does NOT directly access protected resources.
 
 ---
 
@@ -214,78 +221,78 @@ Instead, it is used to generate a new access token.
 Imagine:
 
 ```text
-Access Token expires after 15 minutes
+Access Token Lifetime = 15 Minutes
 ```
 
 Without refresh tokens:
 
 ```text
-User must login again every 15 minutes
+User Must Login Every 15 Minutes
 ```
 
-That would be frustrating.
+Poor user experience.
 
 Instead:
 
 ```text
-Access Token expires
-        ↓
-Refresh Token sent
-        ↓
-Server validates refresh token
-        ↓
-New Access Token generated
+Access Token Expires
+↓
+Refresh Token Sent
+↓
+Server Verifies Refresh Token
+↓
+New Access Token Generated
 ```
 
-The user remains logged in without entering credentials again.
+The user remains logged in without entering credentials repeatedly.
 
 ---
 
-# Difference Between Access Token and Refresh Token
+# Access Token vs Refresh Token
 
-| Access Token               | Refresh Token               |
-| -------------------------- | --------------------------- |
-| Short-lived                | Long-lived                  |
-| Access protected resources | Generate new access tokens  |
-| Sent frequently            | Used occasionally           |
-| Higher exposure risk       | Stored more securely        |
-| Usually expires quickly    | Can live for days or months |
+| Access Token     | Refresh Token              |
+| ---------------- | -------------------------- |
+| Short-lived      | Long-lived                 |
+| Access resources | Generate new access tokens |
+| Sent frequently  | Sent occasionally          |
+| Higher exposure  | More securely stored       |
+| Expires quickly  | Lasts longer               |
 
 ---
 
 # Why Store Refresh Tokens in Database?
 
-Access Tokens are generally not stored in the database.
+Access Tokens are generally not stored in MongoDB.
 
 Refresh Tokens are.
 
-### Reasons
+Reasons:
 
-#### 1. Logout Support
+## 1. Logout Support
 
 When a user logs out:
 
 ```text
-Remove refresh token from DB
+Remove Refresh Token From DB
 ```
 
-Now any previously issued refresh token becomes invalid.
+Any previously issued refresh token becomes invalid.
 
 ---
 
-#### 2. Token Revocation
+## 2. Revocation
 
-If a token is compromised:
+If an account is compromised:
 
 ```text
-Delete refresh token from database
+Delete Refresh Token
 ```
 
-The attacker can no longer refresh sessions.
+The session immediately becomes unusable.
 
 ---
 
-#### 3. Validation
+## 3. Validation
 
 Whenever a refresh request arrives:
 
@@ -297,16 +304,16 @@ Compare
 Database Refresh Token
 ```
 
-If both match:
+If they match:
 
 ```text
-Generate new Access Token
+Generate New Tokens
 ```
 
 Otherwise:
 
 ```text
-Reject request
+Reject Request
 ```
 
 ---
@@ -321,107 +328,120 @@ generateAccessAndRefreshTokens()
 
 Purpose:
 
-* Reusable logic
-* Cleaner controllers
-* Single source of token generation
+* Avoid duplicate code
+* Reuse token logic
+* Centralize token generation
 
 ---
 
-## Implementation Flow
+## Final Implementation
 
 ```js
-const generateAccessAndRefreshTokens = async(userId) => {
-    const user = await User.find(userId)
+const generateAccessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
 
-    const accessToken = user.generateAccessToken()
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
 
-    const refreshToken = user.generateRefreshToken()
+    user.refreshToken = refreshToken;
 
-    user.refreshToken = refreshToken
+    await user.save({
+      validateBeforeSave: false,
+    });
 
-    await user.save({ validateBeforeSave: false })
-
-    return { accessToken, refreshToken }
-}
+    return {
+      accessToken,
+      refreshToken,
+    };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating refresh and access token"
+    );
+  }
+};
 ```
 
 ---
 
-## Step-by-Step Breakdown
+## Why findById() Instead of find()?
 
-### Find User
+Correct:
 
 ```js
-const user = await User.find(userId)
+User.findById(userId)
 ```
 
-Fetches the user from the database.
+Wrong:
+
+```js
+User.find(userId)
+```
+
+Reason:
+
+```text
+find() → Returns Array
+findById() → Returns Single Document
+```
+
+Since we need:
+
+```js
+user.generateAccessToken()
+user.generateRefreshToken()
+```
+
+we require a single document instance.
 
 ---
 
-### Generate Access Token
+# Login Flow
+
+## Step 1: Receive Credentials
 
 ```js
-const accessToken = user.generateAccessToken()
+const { email, username, password } = req.body;
 ```
-
-Creates a short-lived JWT.
-
----
-
-### Generate Refresh Token
-
-```js
-const refreshToken = user.generateRefreshToken()
-```
-
-Creates a long-lived JWT.
-
----
-
-### Store Refresh Token
-
-```js
-user.refreshToken = refreshToken
-```
-
-Stores the refresh token in MongoDB.
-
----
-
-### Save Without Validation
-
-```js
-await user.save({ validateBeforeSave: false })
-```
-
-Validation is skipped because only the refresh token field is being updated.
-
----
-
-# Login User Flow
-
-The login controller performs several operations.
-
----
-
-## Step 1: Get User Credentials
-
-```js
-const { email, username, password } = req.body
-```
-
-Extract user input.
 
 ---
 
 ## Step 2: Validate Input
 
+Correct validation:
+
+```js
+if (!(username || email))
+```
+
+Meaning:
+
+```text
+Username Present → OK
+Email Present → OK
+Neither Present → Reject
+```
+
+---
+
+## Why This Fix Was Needed?
+
+Wrong:
+
 ```js
 if (!username || !email)
 ```
 
-Ensure required credentials exist.
+This would reject:
+
+```json
+{
+  "username": "akshat"
+}
+```
+
+even though username login should be allowed.
 
 ---
 
@@ -429,11 +449,11 @@ Ensure required credentials exist.
 
 ```js
 const user = await User.findOne({
-    $or: [{ username }, { email }]
-})
+  $or: [{ username }, { email }],
+});
 ```
 
-Allows login using:
+Allows login using either:
 
 * Username
 * Email
@@ -444,17 +464,17 @@ Allows login using:
 
 ```js
 const isPasswordValid =
-await user.isPasswordCorrect(password)
+await user.isPasswordCorrect(password);
 ```
 
-Internally compares:
+Internally:
 
 ```text
 Entered Password
-      ↓
-Hashed Password
-      ↓
+↓
 bcrypt.compare()
+↓
+Stored Hash
 ```
 
 ---
@@ -462,31 +482,38 @@ bcrypt.compare()
 ## Step 5: Generate Tokens
 
 ```js
-const { accessToken, refreshToken } =
-await generateAccessAndRefreshTokens(user._id)
+const {
+  accessToken,
+  refreshToken,
+} =
+await generateAccessAndRefreshTokens(
+  user._id
+);
 ```
-
-Both tokens are generated.
 
 ---
 
-## Step 6: Remove Sensitive Fields
+## Step 6: Fetch Clean User
+
+Correct:
 
 ```js
-.select("-password -refreshToken")
+const loggedInUser =
+await User.findById(user._id)
+.select("-password -refreshToken");
 ```
 
-Prevents exposing sensitive information.
+The missing `await` bug was fixed here.
 
 ---
 
-## Step 7: Configure Cookie Options
+## Step 7: Configure Cookies
 
 ```js
 const options = {
-    httpOnly: true,
-    secure: true
-}
+  httpOnly: true,
+  secure: true,
+};
 ```
 
 ---
@@ -494,11 +521,17 @@ const options = {
 ## Step 8: Send Cookies
 
 ```js
-.cookie("accessToken", accessToken, options)
-.cookie("refreshToken", refreshToken, options)
+.cookie(
+  "accessToken",
+  accessToken,
+  options
+)
+.cookie(
+  "refreshToken",
+  refreshToken,
+  options
+)
 ```
-
-Browser stores tokens automatically.
 
 ---
 
@@ -514,19 +547,17 @@ Login successful.
 
 # Cookies
 
-Cookies are small pieces of data stored in the browser.
+Cookies allow browsers to automatically send authentication data with future requests.
 
-Instead of manually sending tokens each time:
+Instead of manually attaching tokens every time:
 
 ```text
-Browser automatically sends cookies
+Browser Handles It Automatically
 ```
-
-This makes authentication easier.
 
 ---
 
-# Cookie Security Options
+# Cookie Security
 
 ## httpOnly
 
@@ -542,18 +573,13 @@ Example:
 document.cookie
 ```
 
-Cannot access HttpOnly cookies.
-
----
-
-### Why Is This Important?
+cannot access HttpOnly cookies.
 
 Protects against:
 
 ```text
 XSS Attacks
-Cookie Theft
-Token Leakage
+Token Theft
 ```
 
 ---
@@ -564,80 +590,56 @@ Token Leakage
 secure: true
 ```
 
-Cookies are only sent through HTTPS connections.
+Cookies are only sent over HTTPS.
 
-Without HTTPS:
+Protects against:
 
 ```text
-Cookie not transmitted
+Network Sniffing
+Man-in-the-Middle Attacks
 ```
-
-This prevents interception over insecure networks.
 
 ---
 
 # Authentication Middleware
 
-Middleware is a function that executes between:
-
-```text
-Request
-   ↓
-Middleware
-   ↓
-Controller
-```
-
-It can:
-
-* Validate requests
-* Modify requests
-* Block requests
-* Attach additional data
-
----
-
-# verifyJWT Middleware
-
-A new middleware file was created:
+A middleware was introduced:
 
 ```js
-auth.middleware.js
+verifyJWT
 ```
 
 Purpose:
 
 ```text
-Verify Access Token
+Verify User Before Protected Routes Execute
 ```
-
-before protected routes execute.
 
 ---
 
 # Middleware Flow
 
 ```text
-Incoming Request
-        ↓
-Get Token
-        ↓
+Request Arrives
+      ↓
+Extract Token
+      ↓
 Verify Token
-        ↓
+      ↓
 Find User
-        ↓
+      ↓
 Attach User To Request
-        ↓
+      ↓
 next()
 ```
 
 ---
 
-# Extracting the Token
+# Extracting Access Token
 
 The middleware checks two locations.
 
-## Cookies
+## Cookie
 
 ```js
 req.cookies?.accessToken
@@ -657,16 +659,10 @@ Example:
 Authorization: Bearer eyJhbGc...
 ```
 
-Removing Bearer:
+Removing "Bearer":
 
 ```js
 .replace("Bearer ", "")
-```
-
-Result:
-
-```text
-Only the JWT remains
 ```
 
 ---
@@ -675,58 +671,32 @@ Only the JWT remains
 
 ```js
 jwt.verify(
-    token,
-    process.env.ACCESS_TOKEN_SECRET
+  token,
+  process.env.ACCESS_TOKEN_SECRET
 )
-```
-
-The token is decoded and verified.
-
-If invalid:
-
-```text
-Unauthorized
 ```
 
 If valid:
 
 ```text
-Continue processing
+Continue
+```
+
+If invalid:
+
+```text
+401 Unauthorized
 ```
 
 ---
 
-# Finding User
+# Attaching User To Request
 
 ```js
-const user = await User.findById(
-    decodedToken._id
-)
+req.user = user;
 ```
 
-Ensures the user still exists.
-
----
-
-# Removing Sensitive Fields
-
-```js
-.select("-password -refreshToken")
-```
-
-The middleware should never expose sensitive data.
-
----
-
-# Attaching User to Request
-
-```js
-req.user = user
-```
-
-This is extremely useful.
-
-Now every protected controller can access:
+Now any controller can access:
 
 ```js
 req.user._id
@@ -734,57 +704,29 @@ req.user.username
 req.user.email
 ```
 
-without querying authentication again.
-
----
-
-# next()
-
-```js
-next()
-```
-
-Transfers control to the next middleware or controller.
-
-Without:
-
-```js
-next()
-```
-
-the request would get stuck.
+without authenticating again.
 
 ---
 
 # Protected Routes
 
-Before:
-
-```js
-router.post("/logout", logoutUser)
-```
-
-Anyone could call this endpoint.
-
----
-
-After:
+Routes can be protected like:
 
 ```js
 router.post(
-    "/logout",
-    verifyJWT,
-    logoutUser
-)
+  "/logout",
+  verifyJWT,
+  logoutUser
+);
 ```
 
 Flow:
 
 ```text
 Request
-   ↓
+↓
 verifyJWT
-   ↓
+↓
 logoutUser
 ```
 
@@ -794,50 +736,18 @@ Only authenticated users can proceed.
 
 # Logout Flow
 
-The logout controller performs session cleanup.
-
----
-
 ## Remove Refresh Token
 
 ```js
 await User.findByIdAndUpdate(
-    req.user._id,
-    {
-        $set: {
-            refreshToken: undefined
-        }
-    }
-)
+  req.user._id,
+  {
+    $set: {
+      refreshToken: undefined,
+    },
+  }
+);
 ```
-
-The stored refresh token is removed.
-
----
-
-## Why Remove It?
-
-Imagine:
-
-```text
-Attacker has old refresh token
-```
-
-But:
-
-```text
-Database refresh token = null
-```
-
-Comparison fails.
-
-Result:
-
-```text
-Refresh denied
-```
-
-This effectively terminates the session.
 
 ---
 
@@ -848,166 +758,474 @@ This effectively terminates the session.
 .clearCookie("refreshToken")
 ```
 
-Removes both browser cookies.
-
 ---
 
-## Send Response
-
-```js
-User Logged Out Successfully
-```
-
-Session ends completely.
-
----
-
-# Complete Authentication Lifecycle
+## Result
 
 ```text
-User Registers
-        ↓
-User Logs In
-        ↓
-Generate Access Token
-        ↓
-Generate Refresh Token
-        ↓
-Store Refresh Token in DB
-        ↓
-Send Tokens as Cookies
-        ↓
-Access Protected Routes
-        ↓
-verifyJWT Middleware
-        ↓
-Token Valid
-        ↓
-Allow Request
-        ↓
-Access Token Expires
-        ↓
-Refresh Token Used
-        ↓
-New Access Token Generated
-        ↓
-User Continues Working
-        ↓
-Logout
-        ↓
-Refresh Token Removed
-        ↓
-Cookies Cleared
-        ↓
 Session Destroyed
+User Logged Out
 ```
 
 ---
 
-# Security Best Practices Learned
+# Refresh Access Token Endpoint
 
-### Always Hash Passwords
-
-Never store plain-text passwords.
-
-Use:
+A new endpoint was added:
 
 ```js
-bcrypt
+router.route("/refresh-token")
+.post(refreshAccessToken);
 ```
 
----
-
-### Use Short-Lived Access Tokens
-
-Reduces damage if compromised.
-
----
-
-### Store Refresh Tokens Securely
-
-Prefer database storage for revocation and validation.
-
----
-
-### Use HttpOnly Cookies
-
-Prevents JavaScript access.
-
----
-
-### Use Secure Cookies
-
-Transmit only over HTTPS.
-
----
-
-### Protect Sensitive Routes
-
-Always use authentication middleware.
-
----
-
-### Remove Sensitive Fields
-
-Never send:
+Purpose:
 
 ```text
-Password
-Refresh Token
+Generate New Access Token
+Without Requiring Login
 ```
 
-inside API responses.
+This endpoint is the core reason Refresh Tokens exist.
+
+---
+
+# refreshAccessToken Controller
+
+## Step 1: Get Refresh Token
+
+```js
+const incomingRefreshToken =
+  req.cookies.refreshToken ||
+  req.body.refreshToken;
+```
+
+Token can come from:
+
+* Cookies
+* Request Body
+
+---
+
+## Step 2: Check Existence
+
+```js
+if (!incomingRefreshToken)
+```
+
+Return:
+
+```text
+401 Unauthorized
+```
+
+---
+
+## Step 3: Verify Token
+
+```js
+const decodedToken =
+jwt.verify(
+  incomingRefreshToken,
+  process.env.REFRESH_TOKEN_SECRET
+);
+```
+
+Checks:
+
+* Signature
+* Expiration
+* Integrity
+
+---
+
+## Why Separate Secrets?
+
+Example:
+
+```env
+ACCESS_TOKEN_SECRET=abc123
+REFRESH_TOKEN_SECRET=xyz789
+```
+
+Benefits:
+
+* Better security
+* Easier rotation
+* Separate control
+
+---
+
+## Step 4: Find User
+
+```js
+const user =
+await User.findById(
+  decodedToken?._id
+);
+```
+
+---
+
+## Step 5: Validate User
+
+```js
+if (!user)
+```
+
+Reject request.
+
+Possible reasons:
+
+```text
+User Deleted
+Account Removed
+Database Issue
+```
+
+---
+
+## Step 6: Compare Refresh Token
+
+```js
+if (
+  incomingRefreshToken !==
+  user?.refreshToken
+)
+```
+
+This is one of the most important security checks.
+
+---
+
+## Why Compare Against Database?
+
+Suppose:
+
+```text
+User Logs Out
+```
+
+Database:
+
+```text
+refreshToken = null
+```
+
+Attacker:
+
+```text
+Still Has Old Refresh Token
+```
+
+Comparison:
+
+```text
+Old Token
+    ≠
+Database Token
+```
+
+Result:
+
+```text
+Access Denied
+```
+
+---
+
+# Refresh Token Rotation
+
+Whenever a refresh succeeds:
+
+```text
+Old Refresh Token
+↓
+Invalidated
+↓
+New Refresh Token Generated
+```
+
+This is called:
+
+## Refresh Token Rotation
+
+Benefits:
+
+* Better security
+* Limits replay attacks
+* Makes stolen tokens less useful
+
+---
+
+# Important Code Observation
+
+Current helper returns:
+
+```js
+{
+  accessToken,
+  refreshToken
+}
+```
+
+But refresh controller expects:
+
+```js
+{
+  accessToken,
+  newRefreshToken
+}
+```
+
+A cleaner approach:
+
+```js
+const {
+  accessToken,
+  refreshToken:
+    newRefreshToken,
+} =
+await generateAccessAndRefreshTokens(
+  user._id
+);
+```
+
+This renames the returned property during destructuring.
+
+---
+
+# Sending Updated Cookies
+
+```js
+.cookie(
+  "accessToken",
+  accessToken,
+  options
+)
+.cookie(
+  "refreshToken",
+  newRefreshToken,
+  options
+)
+```
+
+Browser now stores:
+
+```text
+New Access Token
+New Refresh Token
+```
+
+---
+
+# Refresh Token Lifecycle
+
+```text
+User Login
+      ↓
+Access Token Generated
+      ↓
+Refresh Token Generated
+      ↓
+Refresh Token Saved In DB
+      ↓
+Access Token Expires
+      ↓
+/refresh-token Called
+      ↓
+Refresh Token Verified
+      ↓
+Database Comparison
+      ↓
+Generate New Tokens
+      ↓
+Update Database
+      ↓
+Update Cookies
+      ↓
+Continue Session
+```
+
+---
+
+# Complete Authentication Architecture
+
+```text
+Register
+   ↓
+Login
+   ↓
+Generate Access Token
+   ↓
+Generate Refresh Token
+   ↓
+Store Refresh Token In DB
+   ↓
+Store Tokens In Cookies
+   ↓
+Protected Routes
+   ↓
+verifyJWT Middleware
+   ↓
+Access Token Expires
+   ↓
+/refresh-token Endpoint
+   ↓
+Validate Refresh Token
+   ↓
+Issue New Tokens
+   ↓
+Continue Session
+   ↓
+Logout
+   ↓
+Delete Refresh Token
+   ↓
+Clear Cookies
+```
+
+---
+
+# Common Mistakes Fixed During Development
+
+### Fixed User Lookup
+
+Wrong:
+
+```js
+User.find(userId)
+```
+
+Correct:
+
+```js
+User.findById(userId)
+```
+
+---
+
+### Fixed Login Validation
+
+Wrong:
+
+```js
+if (!username || !email)
+```
+
+Correct:
+
+```js
+if (!(username || email))
+```
+
+---
+
+### Fixed Missing await
+
+Wrong:
+
+```js
+const loggedInUser =
+User.findById(...)
+```
+
+Correct:
+
+```js
+const loggedInUser =
+await User.findById(...)
+```
+
+---
+
+### Fixed JWT Import
+
+Wrong:
+
+```js
+import { jwt }
+from "jsonwebtoken"
+```
+
+Correct:
+
+```js
+import jwt
+from "jsonwebtoken"
+```
 
 ---
 
 # Interview Questions
 
-### What is the difference between Access Token and Refresh Token?
+### Difference between Access Token and Refresh Token?
 
-Access Token is short-lived and used to access resources. Refresh Token is long-lived and used to generate new access tokens.
+Access Token accesses resources and is short-lived.
+
+Refresh Token generates new access tokens and is long-lived.
 
 ---
 
-### Why store Refresh Tokens in the database?
+### Why store Refresh Tokens in DB?
 
-For validation, revocation, logout support, and improved security.
+For:
+
+* Logout
+* Revocation
+* Validation
+* Token Rotation
+
+---
+
+### What is Refresh Token Rotation?
+
+Replacing the old refresh token with a newly generated refresh token whenever a refresh request succeeds.
+
+---
+
+### Why compare Refresh Token with DB?
+
+To ensure it has not been revoked, replaced, or reused.
 
 ---
 
 ### Why use HttpOnly cookies?
 
-To prevent JavaScript from accessing authentication tokens and reduce XSS attacks.
+To prevent JavaScript from reading tokens and reduce XSS attacks.
 
 ---
 
 ### Why use Secure cookies?
 
-To ensure cookies are only transmitted over HTTPS.
+To ensure tokens travel only through HTTPS.
 
 ---
 
-### What does JWT middleware do?
+### What does verifyJWT do?
 
-It verifies incoming tokens, authenticates the user, and allows access to protected routes.
+Verifies token validity and authenticates the user before protected routes execute.
 
 ---
 
 ### What is req.user?
 
-A custom property attached by authentication middleware containing the authenticated user's information.
+User information attached by authentication middleware after successful verification.
 
 ---
 
 # Key Takeaways
 
-* JWT provides stateless authentication.
+* JWT enables stateless authentication.
 * Access Tokens are short-lived.
 * Refresh Tokens are long-lived.
-* Refresh Tokens are stored in the database.
-* Cookies can securely store tokens.
-* `httpOnly` and `secure` improve security.
-* Middleware protects private routes.
-* `verifyJWT` authenticates users before controller execution.
-* `req.user` makes authenticated user data available throughout the request lifecycle.
+* Refresh Tokens should be stored in the database.
+* Cookies simplify token storage.
+* `httpOnly` protects against XSS attacks.
+* `secure` ensures HTTPS-only transmission.
+* Middleware protects sensitive routes.
+* `verifyJWT` authenticates users before controllers execute.
+* `req.user` provides authenticated user information.
+* Refresh Tokens allow seamless session continuation.
+* Refresh Token Rotation improves security.
 * Logout should remove refresh tokens and clear cookies.
+* Token comparison against the database prevents reuse of revoked tokens.
